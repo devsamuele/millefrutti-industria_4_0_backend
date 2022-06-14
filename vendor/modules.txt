@@ -4,6 +4,14 @@ github.com/ardanlabs/conf
 # github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d
 ## explicit; go 1.13
 github.com/decred/dcrd/dcrec/secp256k1/v4
+# github.com/devsamuele/contact-service v0.0.0-20220506103700-fbae8a4308ff
+## explicit; go 1.18
+github.com/devsamuele/contact-service/app/contact-api/handler
+github.com/devsamuele/contact-service/business/data/contact/model
+github.com/devsamuele/contact-service/business/data/contact/service
+github.com/devsamuele/contact-service/business/data/contact/store
+github.com/devsamuele/contact-service/business/data/person
+github.com/devsamuele/contact-service/business/sys/database
 # github.com/devsamuele/elit v0.0.0-20220601111434-39fba0f3d773
 ## explicit; go 1.18
 github.com/devsamuele/elit/field
@@ -148,3 +156,5 @@ golang.org/x/sync/errgroup
 ## explicit; go 1.11
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+## explicit

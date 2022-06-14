@@ -1,18 +1,20 @@
 package database
 
-// type Cfg struct {
-// 	URI     string
-// 	Name    string
-// 	Timeout time.Duration
-// }
+import (
+	"database/sql"
+	"time"
+)
 
-// func Open(cfg Cfg) (*mongo.Client, context.Context, context.CancelFunc, error) {
-// 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
-// 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.URI))
-// 	if err != nil {
-// 		cancel()
-// 		return nil, nil, nil, fmt.Errorf("opening db: %w", err)
-// 	}
+type Cfg struct {
+	URI     string
+	Name    string
+	Timeout time.Duration
+}
 
-// 	return client, ctx, cancel, nil
-// }
+func Open(cfg Cfg) (*sql.DB, error) {
+	db, err := sql.Open("sqlserver", "sqlserver://administrator:buffaesbuffa@192.168.0.15:1433")
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}

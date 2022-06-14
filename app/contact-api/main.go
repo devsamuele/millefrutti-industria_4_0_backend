@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/ardanlabs/conf"
-	"github.com/devsamuele/contact-service/app/contact-api/handler"
 	"github.com/rs/cors"
 )
 
@@ -101,18 +100,6 @@ func run(log *log.Logger) error {
 
 	// Database
 	log.Println("main: Initializing database support")
-	// client, ctx, cancel, err := database.Open(database.Cfg{
-	// 	URI:     cfg.DB.URI,
-	// 	Name:    cfg.DB.Name,
-	// 	Timeout: cfg.DB.Timeout,
-	// })
-	// defer cancel()
-	// if err != nil {
-	// 	return fmt.Errorf("main: opening db: %w", err)
-	// }
-	// defer client.Disconnect(ctx)
-
-	// db := client.Database(cfg.DB.Name)
 
 	// Debug Service
 	// /debug/pprof endpoint
@@ -132,12 +119,9 @@ func run(log *log.Logger) error {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
-	// validate := validator.New()
-	// translator, _ := ut.New(en.New(), en.New()).GetTranslator("en")
-
 	api := http.Server{
 		Addr:              cfg.Web.APIHost,
-		Handler:           cors.AllowAll().Handler(handler.API(build, ch, db, shutdown, log, authentication)),
+		Handler:           cors.AllowAll().Handler(handler.API(build, db, shutdown, log)),
 		ReadHeaderTimeout: cfg.Web.ReadTimeout,
 		WriteTimeout:      cfg.Web.WriteTimeout,
 	}
