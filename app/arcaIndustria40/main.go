@@ -129,11 +129,11 @@ func run(log *log.Logger) error {
 	ctx := context.Background()
 
 	// Pasteurizer "opc.tcp://192.168.1.201:4840"
-	pasteurizerClient := opcua.NewClient("opc.tcp://192.188.100.201:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
+	pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.201:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	defer pasteurizerClient.CloseWithContext(ctx)
 
 	// Spindryer "opc.tcp://192.168.1.22:4840"
-	spindryerClient := opcua.NewClient("opc.tcp://192.188.100.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
+	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	defer spindryerClient.CloseWithContext(ctx)
 
 	// TODO Move away
