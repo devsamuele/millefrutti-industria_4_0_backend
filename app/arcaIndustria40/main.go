@@ -128,24 +128,13 @@ func run(log *log.Logger) error {
 	log.Println("main: Initializing opcua support")
 	ctx := context.Background()
 
+	// Pasteurizer "opc.tcp://192.168.1.201:4840"
 	pasteurizerClient := opcua.NewClient("opc.tcp://192.188.100.201:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
-	// if err := pasteurizerClient.Connect(ctx); err != nil {
-	// 	log.Printf("main: opcua pasteurizer: %v", err)
-	// 	// pasteurizerClient.CloseWithContext(ctx)
-	// 	// return err
-	// }
 	defer pasteurizerClient.CloseWithContext(ctx)
 
 	// Spindryer "opc.tcp://192.168.1.22:4840"
 	spindryerClient := opcua.NewClient("opc.tcp://192.188.100.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
-	// if err := spindryerClient.Connect(ctx); err != nil {
-	// 	log.Printf("main: opcua spindryer: %v", err)
-	// 	// spindryerClient.CloseWithContext(ctx)
-	// 	// return err
-	// }
 	defer spindryerClient.CloseWithContext(ctx)
-
-	// Pasteurizer "opc.tcp://192.168.1.201:4840"
 
 	// TODO Move away
 	go func() {
@@ -232,12 +221,6 @@ func run(log *log.Logger) error {
 			time.Sleep(time.Second * 15)
 		}
 	}()
-
-	// opcuaSpindryerService := spindryer.NewOpcuaService(ctx, log, spindryerClient, shutdown, spindryer.NewStore(db, log), &io)
-	// opcuaSpindryerService.Run()
-
-	// opcuaPasteurizerService := pasteurizer.NewOpcuaService(ctx, log, pasteurizerClient, shutdown, pasteurizer.NewStore(db, log), &io)
-	// opcuaPasteurizerService.Run()
 
 	// Start API Service
 	log.Println("main: Initializing API support")
