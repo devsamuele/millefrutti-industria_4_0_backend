@@ -2,17 +2,15 @@ package database
 
 import (
 	"database/sql"
-	"time"
+
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
-type Cfg struct {
-	URI     string
-	Name    string
-	Timeout time.Duration
-}
+// sqlserver://cash:Mille.2021@192.168.1.10:1433?database=ADB_MILLEFRUTTISRL
+// sqlserver://sa:recall@192.168.0.15:1433?database=ADB_DEMO
 
-func Open(cfg Cfg) (*sql.DB, error) {
-	db, err := sql.Open("sqlserver", "sqlserver://administrator:buffaesbuffa@192.168.0.15:1433")
+func Open() (*sql.DB, error) {
+	db, err := sql.Open("sqlserver", "sqlserver://cash:Mille.2021@192.168.1.10:1433?database=ADB_MILLEFRUTTISRL")
 	if err != nil {
 		return nil, err
 	}
