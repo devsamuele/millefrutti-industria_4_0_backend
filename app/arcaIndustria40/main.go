@@ -128,7 +128,7 @@ func run(log *log.Logger) error {
 	log.Println("main: Initializing opcua support")
 	ctx := context.Background()
 
-	pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.201:4840", opcua.SecurityMode(ua.MessageSecurityModeNone))
+	pasteurizerClient := opcua.NewClient("opc.tcp://192.188.100.201:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	if err := pasteurizerClient.Connect(ctx); err != nil {
 		log.Printf("main: opcua pasteurizer: %v", err)
 		// pasteurizerClient.CloseWithContext(ctx)
@@ -137,7 +137,7 @@ func run(log *log.Logger) error {
 	defer pasteurizerClient.CloseWithContext(ctx)
 
 	// Spindryer "opc.tcp://192.168.1.22:4840"
-	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone))
+	spindryerClient := opcua.NewClient("opc.tcp://192.188.100.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	if err := spindryerClient.Connect(ctx); err != nil {
 		log.Printf("main: opcua spindryer: %v", err)
 		// spindryerClient.CloseWithContext(ctx)
