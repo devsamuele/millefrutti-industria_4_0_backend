@@ -105,6 +105,24 @@ func run(log *log.Logger) error {
 		return fmt.Errorf("main: opening db: %w", err)
 	}
 
+	go func() {
+		var connected bool
+		for {
+			if err := db.Ping(); err != nil {
+				if connected {
+					log.Println("sql: db", err)
+				}
+				connected = false
+			} else {
+				if !connected {
+					log.Printf("sql: db connected")
+				}
+				connected = true
+			}
+			time.Sleep(time.Second * 5)
+		}
+	}()
+
 	// Debug Service
 	// /debug/pprof endpoint
 	// /debug/vars endpoint
@@ -157,13 +175,17 @@ func run(log *log.Logger) error {
 		for {
 			if spindryerClient.State() != opcua.Connected {
 				if err := spindryerClient.Connect(ctx); err != nil {
+					if spindryer.OpcuaConnected {
+						log.Printf("opcua: spindryer: %v", err)
+					}
 					spindryer.OpcuaConnected = false
-					log.Printf("opcua: spindryer: %v", err)
-					//spindryerClient.CloseWithContext(ctx)
 				} else {
+					if !spindryer.OpcuaConnected {
+						log.Printf("opcua: spindryer connected")
+					}
 					spindryer.OpcuaConnected = true
-					log.Printf("opcua: spindryer connected")
 				}
+
 				conn := spindryer.OpcuaConnection{
 					Connected: pasteurizer.OpcuaConnected,
 				}
@@ -199,12 +221,15 @@ func run(log *log.Logger) error {
 		for {
 			if pasteurizerClient.State() != opcua.Connected {
 				if err := pasteurizerClient.Connect(ctx); err != nil {
+					if pasteurizer.OpcuaConnected {
+						log.Printf("opcua: pasteurizer: %v", err)
+					}
 					pasteurizer.OpcuaConnected = false
-					log.Printf("opcua: pasteurizer: %v", err)
-					//pasteurizerClient.CloseWithContext(ctx)
 				} else {
+					if !pasteurizer.OpcuaConnected {
+						log.Printf("opcua: pasteurizer connected")
+					}
 					pasteurizer.OpcuaConnected = true
-					log.Printf("opcua: pasteurizer connected")
 				}
 				conn := pasteurizer.OpcuaConnection{
 					Connected: pasteurizer.OpcuaConnected,

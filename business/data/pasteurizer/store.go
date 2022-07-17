@@ -67,6 +67,7 @@ func (s Store) DeleteLottoArca(ctx context.Context, tx *sql.Tx, cd_lotto, cd_ar 
 }
 
 func (s Store) QueryWork(ctx context.Context) ([]Work, error) {
+
 	rows, err := s.db.QueryContext(ctx, `select top(50) id, cd_lotto, cd_ar, basil_amount, packages, date, document_created, status, created from xPastorizzatore order by date desc`)
 	if err != nil {
 		return make([]Work, 0), err
