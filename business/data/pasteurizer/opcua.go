@@ -137,6 +137,7 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 
 				// TODO um
 				basilAmount, _ = newBasilAmount.(int64)
+				log.Println("basil amount:", basilAmount)
 				work.BasilAmount = int(basilAmount)
 
 				var packages uint16
@@ -146,6 +147,7 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 				}
 
 				packages, _ = newPackages.(uint16)
+				log.Println("basil packages:", packages)
 				work.Packages = int(packages)
 
 				err = o.store.UpdateWork(o.ctx, tx, work)

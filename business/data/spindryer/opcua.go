@@ -77,6 +77,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 				}
 
 				totalCycles, _ = newTotalCycles.(int32)
+				log.Println("total cycles work:", totalCycles)
 				work.TotalCycles = int(totalCycles)
 
 				err = o.store.UpdateWork(o.ctx, tx, work)
@@ -144,6 +145,7 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 				}
 
 				totalCycles, _ = newTotalCycles.(int32)
+				log.Println("total cycles done:", totalCycles)
 
 				// TODO multiply by K
 				work.Cycles = int(totalCycles) - oldWork.TotalCycles
