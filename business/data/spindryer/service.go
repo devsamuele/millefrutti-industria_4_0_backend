@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"strconv"
 	"time"
 
@@ -65,7 +64,6 @@ func (s Service) GetOpcuaConnection(ctx context.Context) OpcuaConnection {
 	}
 
 }
-
 
 func (s Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Work, error) {
 
@@ -174,17 +172,17 @@ func (s Service) DeleteWork(ctx context.Context, id string) error {
 		return err
 	}
 
-	var cdLotto string
-	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_LOTTO_DA_MES", cdLotto)
-	if err != nil {
-		log.Println(err)
-	}
+	// var cdLotto string
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_LOTTO_DA_MES", cdLotto)
+	// if err != nil {
+	// 	log.Println(err)
+	// }
 
-	var bit bool = false
-	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
-	if err != nil {
-		log.Println(err)
-	}
+	// var bit bool = false
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
+	// if err != nil {
+	// 	log.Println(err)
+	// }
 
 	if err := tx.Commit(); err != nil {
 		return err

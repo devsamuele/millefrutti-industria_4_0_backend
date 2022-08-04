@@ -163,17 +163,17 @@ func (s Service) DeleteWork(ctx context.Context, id string) error {
 		return err
 	}
 
-	var cdLotto string = " "
-	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Receive.Numero_Lotto", cdLotto)
-	if err != nil {
-		return err
-	}
+	// var cdLotto string = " "
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Receive.Numero_Lotto", cdLotto)
+	// if err != nil {
+	// 	return err
+	// }
 
-	var bit bool = false
-	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Receive.Bit_Nuovo_Lotto", bit)
-	if err != nil {
-		return err
-	}
+	// var bit bool = false
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Receive.Bit_Nuovo_Lotto", bit)
+	// if err != nil {
+	// 	return err
+	// }
 
 	if err := tx.Commit(); err != nil {
 		return err

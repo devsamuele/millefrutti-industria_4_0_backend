@@ -187,7 +187,7 @@ func run(log *log.Logger) error {
 				}
 
 				conn := spindryer.OpcuaConnection{
-					Connected: pasteurizer.OpcuaConnected,
+					Connected: spindryer.OpcuaConnected,
 				}
 				b, err := json.Marshal(conn)
 				if err != nil {
