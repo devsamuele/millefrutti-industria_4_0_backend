@@ -47,6 +47,24 @@ func (s Store) CheckLottoAndAr(ctx context.Context, tx *sql.Tx, cd_lotto, cd_ar 
 	return true, nil
 }
 
+func (s Store) CheckLottoAndArInDoc(ctx context.Context, tx *sql.Tx, cd_lotto, cd_ar string) (bool, error) {
+	row := tx.QueryRowContext(ctx, `select count(*) from DoRig where cd_ARLotto = @p1 and cd_AR = @p2`, cd_lotto, cd_ar)
+	if err := row.Err(); err != nil {
+		return false, nil
+	}
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return false, err
+	}
+
+	if count == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (s Store) QueryWork(ctx context.Context) ([]Work, error) {
 	rows, err := s.db.QueryContext(ctx, `select top(50) id, cd_lotto, cd_ar, cycles, total_cycles, date, document_created, status, created from xCentrifuga order by date desc`)
 	if err != nil {

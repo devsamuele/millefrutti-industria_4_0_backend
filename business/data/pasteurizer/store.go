@@ -29,8 +29,26 @@ func NewStore(db *sql.DB, log *log.Logger) Store {
 	return Store{db: db, log: log}
 }
 
-func (s Store) CheckLottoArca(ctx context.Context, tx *sql.Tx, cd_lotto, cd_ar string) (bool, error) {
+func (s Store) CheckLottoAndAr(ctx context.Context, tx *sql.Tx, cd_lotto, cd_ar string) (bool, error) {
 	row := tx.QueryRowContext(ctx, `select count(*) from ARLotto where cd_ARLotto = @p1 and cd_AR = @p2`, cd_lotto, cd_ar)
+	if err := row.Err(); err != nil {
+		return false, nil
+	}
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return false, err
+	}
+
+	if count == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (s Store) CheckLottoAndArInDoc(ctx context.Context, tx *sql.Tx, cd_lotto, cd_ar string) (bool, error) {
+	row := tx.QueryRowContext(ctx, `select count(*) from DoRig where cd_ARLotto = @p1 and cd_AR = @p2`, cd_lotto, cd_ar)
 	if err := row.Err(); err != nil {
 		return false, nil
 	}

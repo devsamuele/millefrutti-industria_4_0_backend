@@ -167,9 +167,18 @@ func (s Service) DeleteWork(ctx context.Context, id string) error {
 		return err
 	}
 
-	err = s.store.DeleteLottoArca(ctx, tx, w.CdLotto, w.CdAr)
+	// TODO
+
+	found, err := s.store.CheckLottoAndArInDoc(ctx, tx, w.CdLotto, w.CdAr)
 	if err != nil {
 		return err
+	}
+
+	if !found {
+		err = s.store.DeleteLottoArca(ctx, tx, w.CdLotto, w.CdAr)
+		if err != nil {
+			return err
+		}
 	}
 
 	// var cdLotto string

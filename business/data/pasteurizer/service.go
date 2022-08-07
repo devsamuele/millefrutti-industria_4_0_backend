@@ -65,7 +65,7 @@ func (s Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Wor
 
 	defer tx.Rollback()
 
-	found, err := s.store.CheckLottoArca(ctx, tx, w.CdLotto, w.CdAr)
+	found, err := s.store.CheckLottoAndAr(ctx, tx, w.CdLotto, w.CdAr)
 	if err != nil {
 		return Work{}, err
 	}
@@ -158,9 +158,16 @@ func (s Service) DeleteWork(ctx context.Context, id string) error {
 		return err
 	}
 
-	err = s.store.DeleteLottoArca(ctx, tx, w.CdLotto, w.CdAr)
+	found, err := s.store.CheckLottoAndArInDoc(ctx, tx, w.CdLotto, w.CdAr)
 	if err != nil {
 		return err
+	}
+
+	if !found {
+		err = s.store.DeleteLottoArca(ctx, tx, w.CdLotto, w.CdAr)
+		if err != nil {
+			return err
+		}
 	}
 
 	// var cdLotto string = " "

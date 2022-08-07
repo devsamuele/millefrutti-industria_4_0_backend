@@ -147,21 +147,27 @@ func run(log *log.Logger) error {
 	ctx := context.Background()
 
 	// Pasteurizer "opc.tcp://192.168.1.201:4840"
-	pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.201:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
+	pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.201:4840", opcua.AutoReconnect(true), opcua.ReconnectInterval(time.Second*20), opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	defer pasteurizerClient.CloseWithContext(ctx)
+	opcuaPasteurizerService := pasteurizer.NewOpcuaService(ctx, log, pasteurizerClient, shutdown, pasteurizer.NewStore(db, log), &io)
+	opcuaPasteurizerService.Run()
 
 	// Spindryer "opc.tcp://192.168.1.22:4840"
-	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
+	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.AutoReconnect(true), opcua.ReconnectInterval(time.Second*20), opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	defer spindryerClient.CloseWithContext(ctx)
+	opcuaSpindryerService := spindryer.NewOpcuaService(ctx, log, spindryerClient, shutdown, spindryer.NewStore(db, log), &io)
+	opcuaSpindryerService.Run()
 
 	// TODO Move away
 	go func() {
-		if spindryerClient.State() == opcua.Connected {
-			spindryer.OpcuaConnected = true
-			opcuaSpindryerService := spindryer.NewOpcuaService(ctx, log, spindryerClient, shutdown, spindryer.NewStore(db, log), &io)
-			opcuaSpindryerService.Run()
+		for {
+			if spindryerClient.State() != opcua.Connected {
+				spindryer.OpcuaConnected = false
+			} else {
+				spindryer.OpcuaConnected = true
+			}
 			conn := spindryer.OpcuaConnection{
-				Connected: pasteurizer.OpcuaConnected,
+				Connected: spindryer.OpcuaConnected,
 			}
 			b, err := json.Marshal(conn)
 			if err != nil {
@@ -170,42 +176,17 @@ func run(log *log.Logger) error {
 			if err := io.Broadcast("spindryer-opcua-connection", b); err != nil {
 				log.Println(err)
 			}
-		}
-
-		for {
-			if spindryerClient.State() != opcua.Connected {
-				if err := spindryerClient.Connect(ctx); err != nil {
-					if spindryer.OpcuaConnected {
-						log.Printf("opcua: spindryer: %v", err)
-					}
-					spindryer.OpcuaConnected = false
-				} else {
-					if !spindryer.OpcuaConnected {
-						log.Printf("opcua: spindryer connected")
-					}
-					spindryer.OpcuaConnected = true
-				}
-
-				conn := spindryer.OpcuaConnection{
-					Connected: spindryer.OpcuaConnected,
-				}
-				b, err := json.Marshal(conn)
-				if err != nil {
-					log.Println(err)
-				}
-				if err := io.Broadcast("spindryer-opcua-connection", b); err != nil {
-					log.Println(err)
-				}
-			}
-			time.Sleep(time.Second * 15)
+			time.Sleep(time.Second * 20)
 		}
 	}()
 
 	go func() {
-		if pasteurizerClient.State() == opcua.Connected {
-			pasteurizer.OpcuaConnected = true
-			opcuaPasteurizerService := pasteurizer.NewOpcuaService(ctx, log, pasteurizerClient, shutdown, pasteurizer.NewStore(db, log), &io)
-			opcuaPasteurizerService.Run()
+		for {
+			if pasteurizerClient.State() != opcua.Connected {
+				pasteurizer.OpcuaConnected = false
+			} else {
+				pasteurizer.OpcuaConnected = true
+			}
 			conn := pasteurizer.OpcuaConnection{
 				Connected: pasteurizer.OpcuaConnected,
 			}
@@ -216,34 +197,7 @@ func run(log *log.Logger) error {
 			if err := io.Broadcast("pasteurizer-opcua-connection", b); err != nil {
 				log.Println(err)
 			}
-		}
-
-		for {
-			if pasteurizerClient.State() != opcua.Connected {
-				if err := pasteurizerClient.Connect(ctx); err != nil {
-					if pasteurizer.OpcuaConnected {
-						log.Printf("opcua: pasteurizer: %v", err)
-					}
-					pasteurizer.OpcuaConnected = false
-				} else {
-					if !pasteurizer.OpcuaConnected {
-						log.Printf("opcua: pasteurizer connected")
-					}
-					pasteurizer.OpcuaConnected = true
-				}
-				conn := pasteurizer.OpcuaConnection{
-					Connected: pasteurizer.OpcuaConnected,
-				}
-				b, err := json.Marshal(conn)
-				if err != nil {
-					log.Println(err)
-				}
-				if err := io.Broadcast("pasteurizer-opcua-connection", b); err != nil {
-					log.Println(err)
-				}
-			}
-
-			time.Sleep(time.Second * 15)
+			time.Sleep(time.Second * 20)
 		}
 	}()
 

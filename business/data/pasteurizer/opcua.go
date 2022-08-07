@@ -47,6 +47,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 	}()
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
+		log.Println("PASTEURIZER SUBSCRIPTION START WORK:", data)
 		bit, _ := data.(bool)
 		if bit {
 			found := true
@@ -105,6 +106,7 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 	}()
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
+		log.Println("PASTEURIZER SUBSCRIPTION START END:", data)
 		bit, _ := data.(bool)
 		if bit {
 			found := true
