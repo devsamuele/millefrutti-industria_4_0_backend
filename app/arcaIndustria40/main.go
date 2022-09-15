@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"expvar"
 	"fmt"
 	"log"
@@ -19,12 +18,8 @@ import (
 
 	"github.com/ardanlabs/conf"
 	"github.com/devsamuele/millefrutti-industria_4_0_backend/app/arcaIndustria40/handler"
-	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/data/pasteurizer"
-	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/data/spindryer"
 	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/sys/database"
 	"github.com/devsamuele/service-kit/ws"
-	"github.com/gopcua/opcua"
-	"github.com/gopcua/opcua/ua"
 	"github.com/rs/cors"
 )
 
@@ -144,62 +139,6 @@ func run(log *log.Logger) error {
 
 	// OPCUA Spindryer Service
 	log.Println("main: Initializing opcua support")
-	ctx := context.Background()
-
-	// Pasteurizer "opc.tcp://192.168.1.201:4840"
-	pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.201:4840", opcua.AutoReconnect(true), opcua.ReconnectInterval(time.Second*20), opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
-	defer pasteurizerClient.CloseWithContext(ctx)
-	opcuaPasteurizerService := pasteurizer.NewOpcuaService(ctx, log, pasteurizerClient, shutdown, pasteurizer.NewStore(db, log), &io)
-	opcuaPasteurizerService.Run()
-
-	// Spindryer "opc.tcp://192.168.1.22:4840"
-	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.AutoReconnect(true), opcua.ReconnectInterval(time.Second*20), opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
-	defer spindryerClient.CloseWithContext(ctx)
-	opcuaSpindryerService := spindryer.NewOpcuaService(ctx, log, spindryerClient, shutdown, spindryer.NewStore(db, log), &io)
-	opcuaSpindryerService.Run()
-
-	// TODO Move away
-	go func() {
-		for {
-			if spindryerClient.State() != opcua.Connected {
-				spindryer.OpcuaConnected = false
-			} else {
-				spindryer.OpcuaConnected = true
-			}
-			conn := spindryer.OpcuaConnection{
-				Connected: spindryer.OpcuaConnected,
-			}
-			b, err := json.Marshal(conn)
-			if err != nil {
-				log.Println(err)
-			}
-			if err := io.Broadcast("spindryer-opcua-connection", b); err != nil {
-				log.Println(err)
-			}
-			time.Sleep(time.Second * 20)
-		}
-	}()
-
-	go func() {
-		for {
-			if pasteurizerClient.State() != opcua.Connected {
-				pasteurizer.OpcuaConnected = false
-			} else {
-				pasteurizer.OpcuaConnected = true
-			}
-			conn := pasteurizer.OpcuaConnection{
-				Connected: pasteurizer.OpcuaConnected,
-			}
-			b, err := json.Marshal(conn)
-			if err != nil {
-				log.Println(err)
-			}
-			if err := io.Broadcast("pasteurizer-opcua-connection", b); err != nil {
-				log.Println(err)
-			}
-			time.Sleep(time.Second * 20)
-		}
-	}()
 
 	// Start API Service
 	log.Println("main: Initializing API support")
@@ -208,7 +147,7 @@ func run(log *log.Logger) error {
 
 	api := http.Server{
 		Addr:              cfg.Web.APIHost,
-		Handler:           cors.AllowAll().Handler(handler.API(build, db, spindryerClient, pasteurizerClient, &io, shutdown, log)),
+		Handler:           cors.AllowAll().Handler(handler.API(build, db, &io, shutdown, log)),
 		ReadHeaderTimeout: cfg.Web.ReadTimeout,
 		WriteTimeout:      cfg.Web.WriteTimeout,
 	}

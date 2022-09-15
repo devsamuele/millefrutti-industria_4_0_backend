@@ -11,13 +11,41 @@ import (
 )
 
 type PasteurizerGroup struct {
-	srv pasteurizer.Service
+	srv *pasteurizer.Service
 }
 
-func NewPasteurizerGroup(srv pasteurizer.Service) PasteurizerGroup {
+func NewPasteurizerGroup(srv *pasteurizer.Service) PasteurizerGroup {
 	return PasteurizerGroup{
 		srv: srv,
 	}
+}
+
+func (g PasteurizerGroup) OpcuaConnect(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	_, ok := ctx.Value(web.KeyValues).(*web.Values)
+	if !ok {
+		return web.NewShutdownError("web value missing from context")
+	}
+
+	err := g.srv.OpcuaConnect(ctx)
+	if err != nil {
+		return err
+	}
+
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
+}
+
+func (g PasteurizerGroup) OpcuaDisconnect(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	_, ok := ctx.Value(web.KeyValues).(*web.Values)
+	if !ok {
+		return web.NewShutdownError("web value missing from context")
+	}
+
+	err := g.srv.OpcuaDisconnect(ctx)
+	if err != nil {
+		return err
+	}
+
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
 }
 
 func (g PasteurizerGroup) QueryWork(ctx context.Context, w http.ResponseWriter, r *http.Request) error {

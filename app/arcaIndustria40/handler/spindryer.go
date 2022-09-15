@@ -11,13 +11,41 @@ import (
 )
 
 type SpindryerGroup struct {
-	srv spindryer.Service
+	srv *spindryer.Service
 }
 
-func NewSpindryerGroup(srv spindryer.Service) SpindryerGroup {
+func NewSpindryerGroup(srv *spindryer.Service) SpindryerGroup {
 	return SpindryerGroup{
 		srv: srv,
 	}
+}
+
+func (g SpindryerGroup) OpcuaConnect(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	_, ok := ctx.Value(web.KeyValues).(*web.Values)
+	if !ok {
+		return web.NewShutdownError("web value missing from context")
+	}
+
+	err := g.srv.OpcuaConnect(ctx)
+	if err != nil {
+		return err
+	}
+
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
+}
+
+func (g SpindryerGroup) OpcuaDisconnect(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	_, ok := ctx.Value(web.KeyValues).(*web.Values)
+	if !ok {
+		return web.NewShutdownError("web value missing from context")
+	}
+
+	err := g.srv.OpcuaDisconnect(ctx)
+	if err != nil {
+		return err
+	}
+
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
 }
 
 func (g SpindryerGroup) QueryWork(ctx context.Context, w http.ResponseWriter, r *http.Request) error {

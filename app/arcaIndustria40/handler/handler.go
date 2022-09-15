@@ -11,10 +11,9 @@ import (
 	"github.com/devsamuele/service-kit/mid"
 	"github.com/devsamuele/service-kit/web"
 	"github.com/devsamuele/service-kit/ws"
-	"github.com/gopcua/opcua"
 )
 
-func API(build string, db *sql.DB, spindryerClient *opcua.Client, pasteurizerClient *opcua.Client, io *ws.EventEmitter, shutdown chan os.Signal, log *log.Logger) *web.Router {
+func API(build string, db *sql.DB, io *ws.EventEmitter, shutdown chan os.Signal, log *log.Logger) *web.Router {
 
 	handler := io.OnConnection(func(r *http.Request, socket *ws.Socket) {})
 	router := web.NewRouter(shutdown, mid.Logger(log), mid.Errors(log), mid.Metrics(), mid.Panic(log))
@@ -23,16 +22,20 @@ func API(build string, db *sql.DB, spindryerClient *opcua.Client, pasteurizerCli
 	v1.HandleFn(http.MethodGet, "/ws", handler)
 
 	spindryerRouter := v1.SubGroup("/spindryer")
-	spindryerGroup := NewSpindryerGroup(spindryer.NewService(spindryer.NewStore(db, log), spindryerClient, io))
+	spindryerGroup := NewSpindryerGroup(spindryer.NewService(spindryer.NewStore(db, log), shutdown, log, io))
 	spindryerRouter.HandleFn(http.MethodPost, "/createdDocuments", spindryerGroup.CreatedDocument)
+	spindryerRouter.HandleFn(http.MethodPost, "/opcuaConnect", spindryerGroup.OpcuaConnect)
+	spindryerRouter.HandleFn(http.MethodPost, "/opcuaDisconnect", spindryerGroup.OpcuaDisconnect)
 	spindryerRouter.HandleFn(http.MethodPost, "/work", spindryerGroup.InsertWork)
 	spindryerRouter.HandleFn(http.MethodGet, "/work", spindryerGroup.QueryWork)
 	spindryerRouter.HandleFn(http.MethodGet, "/opcuaConnection", spindryerGroup.GetOpcuaConnection)
 	spindryerRouter.HandleFn(http.MethodDelete, "/work/:id", spindryerGroup.DeleteWork)
 
 	pasteurizerRouter := v1.SubGroup("/pasteurizer")
-	pasteurizerGroup := NewPasteurizerGroup(pasteurizer.NewService(pasteurizer.NewStore(db, log), pasteurizerClient, io))
+	pasteurizerGroup := NewPasteurizerGroup(pasteurizer.NewService(pasteurizer.NewStore(db, log), shutdown, log, io))
 	pasteurizerRouter.HandleFn(http.MethodPost, "/createdDocuments", pasteurizerGroup.CreatedDocument)
+	pasteurizerRouter.HandleFn(http.MethodPost, "/opcuaConnect", pasteurizerGroup.OpcuaConnect)
+	pasteurizerRouter.HandleFn(http.MethodPost, "/opcuaDisconnect", pasteurizerGroup.OpcuaDisconnect)
 	pasteurizerRouter.HandleFn(http.MethodPost, "/work", pasteurizerGroup.InsertWork)
 	pasteurizerRouter.HandleFn(http.MethodGet, "/work", pasteurizerGroup.QueryWork)
 	pasteurizerRouter.HandleFn(http.MethodGet, "/opcuaConnection", pasteurizerGroup.GetOpcuaConnection)

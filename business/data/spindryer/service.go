@@ -4,29 +4,80 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/sys/opcuaconn"
+	"github.com/devsamuele/service-kit/web"
 	"github.com/devsamuele/service-kit/ws"
 	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/ua"
 )
 
 type Service struct {
-	store  Store
-	client *opcua.Client
-	io     *ws.EventEmitter
+	store    Store
+	client   *opcua.Client
+	io       *ws.EventEmitter
+	log      *log.Logger
+	shutdown chan os.Signal
 }
 
-func NewService(store Store, client *opcua.Client, io *ws.EventEmitter) Service {
-	return Service{
-		store:  store,
-		client: client,
-		io:     io,
+func NewService(store Store, shutdown chan os.Signal, log *log.Logger, io *ws.EventEmitter) *Service {
+	return &Service{
+		store:    store,
+		io:       io,
+		log:      log,
+		shutdown: shutdown,
 	}
 }
 
-func (s Service) QueryWork(ctx context.Context) ([]Work, error) {
+// Spindryer "opc.tcp://192.168.1.22:4840"
+
+func (s *Service) OpcuaConnect(ctx context.Context) error {
+	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
+	if err := spindryerClient.Connect(ctx); err != nil {
+		return web.NewError("spindryer not connected", web.ErrReasonInternalError, "", "")
+	}
+
+	_ctx, cancel := context.WithCancel(context.Background())
+
+	s.client = spindryerClient
+	opcuaService := NewOpcuaService(_ctx, s.log, s.client, s.shutdown, s.store, s.io)
+	opcuaService.Run()
+
+	go func() {
+		defer func() {
+			s.client.CloseWithContext(_ctx)
+			cancel()
+		}()
+		for {
+			if s.client.State() != opcua.Connected {
+				s.client.CloseWithContext(_ctx)
+
+				if err := s.io.Broadcast("spindryer-client-closed", nil); err != nil {
+					log.Println(err)
+				}
+				return
+			}
+			time.Sleep(time.Second * 5)
+		}
+	}()
+	return nil
+}
+
+func (s *Service) OpcuaDisconnect(ctx context.Context) error {
+	if s.client != nil {
+		if err := s.client.CloseWithContext(ctx); err != nil {
+			log.Println("closing spindryer:", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) QueryWork(ctx context.Context) ([]Work, error) {
 	works, err := s.store.QueryWork(ctx)
 	if err != nil {
 		return make([]Work, 0), err
@@ -34,7 +85,7 @@ func (s Service) QueryWork(ctx context.Context) ([]Work, error) {
 	return works, nil
 }
 
-func (s Service) SetCreatedDocument(ctx context.Context, ids []ID) error {
+func (s *Service) SetCreatedDocument(ctx context.Context, ids []ID) error {
 
 	works := make([]Work, 0)
 	for _, id := range ids {
@@ -57,15 +108,25 @@ func (s Service) SetCreatedDocument(ctx context.Context, ids []ID) error {
 	return nil
 }
 
-func (s Service) GetOpcuaConnection(ctx context.Context) OpcuaConnection {
+func (s *Service) GetOpcuaConnection(ctx context.Context) OpcuaConnection {
+
+	if s.client != nil && s.client.State() == opcua.Connected {
+		return OpcuaConnection{
+			Connected: true,
+		}
+	}
 
 	return OpcuaConnection{
-		Connected: OpcuaConnected,
+		Connected: false,
 	}
 
 }
 
-func (s Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Work, error) {
+func (s *Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Work, error) {
+
+	if s.client == nil {
+		return Work{}, web.NewError("pasteurizer is not connected", web.ErrReasonInternalError, "", "")
+	}
 
 	if err := nw.Validate(); err != nil {
 		return Work{}, err
@@ -115,12 +176,14 @@ func (s Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Wor
 	}
 	w.ID = id
 
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_LOTTO_DA_MES", w.CdLotto)
 	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_LOTTO_DA_MES", w.CdLotto)
 	if err != nil {
 		return Work{}, err
 	}
 
 	var bit bool = true
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
 	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
 	if err != nil {
 		return Work{}, err
@@ -140,7 +203,7 @@ func (s Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Wor
 	return w, nil
 }
 
-func (s Service) DeleteWork(ctx context.Context, id string) error {
+func (s *Service) DeleteWork(ctx context.Context, id string) error {
 	_id, err := strconv.Atoi(id)
 	if err != nil {
 		return err

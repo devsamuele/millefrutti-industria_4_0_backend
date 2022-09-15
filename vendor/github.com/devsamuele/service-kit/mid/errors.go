@@ -2,11 +2,16 @@ package mid
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/devsamuele/service-kit/web"
 )
+
+type errorResponse struct {
+	Error error `json:"error"`
+}
 
 // Errors ...
 func Errors(log *log.Logger) web.Middleware {
@@ -26,21 +31,18 @@ func Errors(log *log.Logger) web.Middleware {
 				// LOG ERROR
 				log.Printf("\t%s : ERROR     : %v", v.TraceID, err)
 
-				var errResp web.ErrorResponse
+				var errResp errorResponse
 				var status int
 				switch {
 				case web.IsRequestError(err):
 					reqErr := web.GetRequestError(err)
-					errResp = web.ErrorResponse{
-						Error: *reqErr,
+					errResp = errorResponse{
+						Error: reqErr,
 					}
 					status = reqErr.Code
 				default:
-					errResp = web.ErrorResponse{
-						Error: web.RequestError{
-							Code:    http.StatusInternalServerError,
-							Message: http.StatusText(http.StatusInternalServerError),
-						},
+					errResp = errorResponse{
+						Error: web.NewRequestError(errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError, web.ErrReasonInternalError, "", ""),
 					}
 					status = http.StatusInternalServerError
 				}

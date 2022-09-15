@@ -7,7 +7,6 @@ import (
 	"errors"
 	"log"
 	"os"
-	"syscall"
 
 	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/sys/opcuaconn"
 	"github.com/devsamuele/service-kit/ws"
@@ -41,11 +40,8 @@ func (o *OpcuaService) Run() {
 
 func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 
-	defer func() {
-		o.shutdown <- syscall.SIGTERM
-	}()
-
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
+
 		log.Println("SPINDRYER SUBSCRIPTION START WORK:", data)
 		bit, _ := data.(bool)
 		if bit {
@@ -110,10 +106,6 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 }
 
 func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
-
-	defer func() {
-		o.shutdown <- syscall.SIGTERM
-	}()
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
 		log.Println("SPINDRYER SUBSCRIPTION END WORK:", data)

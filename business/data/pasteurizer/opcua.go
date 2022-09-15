@@ -7,7 +7,6 @@ import (
 	"errors"
 	"log"
 	"os"
-	"syscall"
 
 	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/sys/opcuaconn"
 	"github.com/devsamuele/service-kit/ws"
@@ -35,16 +34,11 @@ func NewOpcuaService(ctx context.Context, log *log.Logger, c *opcua.Client, shut
 }
 
 func (o *OpcuaService) Run() {
-
 	go o.WatchOrderConf("ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Conferma_Nuovo_Lotto", 1)
 	go o.WatchEndWork("ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Fine_Produzione", 1)
 }
 
 func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
-
-	defer func() {
-		o.shutdown <- syscall.SIGTERM
-	}()
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
 		log.Println("PASTEURIZER SUBSCRIPTION START WORK:", data)
@@ -100,10 +94,6 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 }
 
 func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
-
-	defer func() {
-		o.shutdown <- syscall.SIGTERM
-	}()
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
 		log.Println("PASTEURIZER SUBSCRIPTION START END:", data)

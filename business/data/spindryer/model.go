@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-var OpcuaConnected bool
-
 const (
 	PROCESSING_STATUS_SENT  = "sent"
 	PROCESSING_STATUS_WORK  = "work"

@@ -21,6 +21,7 @@ func Subscribe(ctx context.Context, c *opcua.Client, nodeID string, clientHandle
 	if err != nil {
 		log.Println(err)
 	}
+	defer sub.Cancel(ctx)
 
 	id, err := ua.ParseNodeID(nodeID)
 	if err != nil {
@@ -30,7 +31,11 @@ func Subscribe(ctx context.Context, c *opcua.Client, nodeID string, clientHandle
 	miCreateRequest := opcua.NewMonitoredItemCreateRequestWithDefaults(id, ua.AttributeIDValue, clientHandle)
 	res, err := sub.Monitor(ua.TimestampsToReturnBoth, miCreateRequest)
 	if err != nil || res.Results[0].StatusCode != ua.StatusOK {
-		log.Println(err)
+		if err == nil {
+			log.Println(res.Results[0].StatusCode)
+		} else {
+			log.Println(err)
+		}
 	}
 
 	for {
