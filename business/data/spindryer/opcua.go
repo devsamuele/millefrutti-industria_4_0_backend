@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"os"
 
 	"github.com/devsamuele/millefrutti-industria_4_0_backend/business/sys/opcuaconn"
 	"github.com/devsamuele/service-kit/ws"
@@ -14,22 +13,20 @@ import (
 )
 
 type OpcuaService struct {
-	ctx      context.Context
-	c        *opcua.Client
-	log      *log.Logger
-	store    Store
-	shutdown chan os.Signal
-	io       *ws.EventEmitter
+	ctx   context.Context
+	c     *opcua.Client
+	log   *log.Logger
+	store Store
+	io    *ws.EventEmitter
 }
 
-func NewOpcuaService(ctx context.Context, log *log.Logger, c *opcua.Client, shutdown chan os.Signal, store Store, io *ws.EventEmitter) *OpcuaService {
+func NewOpcuaService(ctx context.Context, log *log.Logger, c *opcua.Client, store Store, io *ws.EventEmitter) *OpcuaService {
 	return &OpcuaService{
-		ctx:      ctx,
-		c:        c,
-		log:      log,
-		shutdown: shutdown,
-		store:    store,
-		io:       io,
+		ctx:   ctx,
+		c:     c,
+		log:   log,
+		store: store,
+		io:    io,
 	}
 }
 

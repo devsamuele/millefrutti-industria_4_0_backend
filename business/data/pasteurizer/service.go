@@ -44,7 +44,7 @@ func (s *Service) OpcuaConnect(ctx context.Context) error {
 	_ctx, cancel := context.WithCancel(context.Background())
 
 	s.client = pasteurizerClient
-	opcuaService := NewOpcuaService(_ctx, s.log, s.client, s.shutdown, s.store, s.io)
+	opcuaService := NewOpcuaService(_ctx, s.log, s.client, s.store, s.io)
 	opcuaService.Run()
 
 	go func() {
