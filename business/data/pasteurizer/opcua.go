@@ -38,7 +38,6 @@ func (o *OpcuaService) Run() {
 func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
-		log.Println("PASTEURIZER SUBSCRIPTION START WORK:", data)
 		bit, _ := data.(bool)
 		if bit {
 			found := true
@@ -52,6 +51,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 			}
 
 			if found && oldWork.Status == PROCESSING_STATUS_SENT {
+				log.Println("PASTEURIZER SUBSCRIPTION - START WORK")
 				work := oldWork
 				work.Status = PROCESSING_STATUS_WORK
 
@@ -83,9 +83,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 					o.log.Println(err)
 					return
 				}
-
 			}
-
 		}
 	})
 }
@@ -93,7 +91,6 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
-		log.Println("PASTEURIZER SUBSCRIPTION START END:", data)
 		bit, _ := data.(bool)
 		if bit {
 			found := true
@@ -128,6 +125,8 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 				basilAmount, _ = newBasilAmount.(int64)
 				log.Println("basil amount:", basilAmount)
 				work.BasilAmount = int(basilAmount)
+				// TODO: TEMPORARY
+				work.BasilAmount = 400
 
 				var packages uint16
 				newPackages, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi")
@@ -138,6 +137,8 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 				packages, _ = newPackages.(uint16)
 				log.Println("basil packages:", packages)
 				work.Packages = int(packages)
+				// TODO: TEMPORARY
+				work.Packages = 2
 
 				err = o.store.UpdateWork(o.ctx, tx, work)
 				if err != nil {
@@ -160,6 +161,7 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 					o.log.Println(err)
 					return
 				}
+				log.Println("PASTEURIZER SUBSCRIPTION - END WORK")
 
 			}
 

@@ -36,6 +36,7 @@ func NewService(store Store, shutdown chan os.Signal, log *log.Logger, io *ws.Ev
 // Spindryer "opc.tcp://192.168.1.22:4840"
 
 func (s *Service) OpcuaConnect(ctx context.Context) error {
+	// spindryerClient := opcua.NewClient("opc.tcp://MacBook-Pro-di-Samuele.local:53530/OPCUA/SimulationServer", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	spindryerClient := opcua.NewClient("opc.tcp://192.168.1.22:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	if err := spindryerClient.Connect(ctx); err != nil {
 		return web.NewError("spindryer not connected", web.ErrReasonInternalError, "", "")
@@ -125,7 +126,7 @@ func (s *Service) GetOpcuaConnection(ctx context.Context) OpcuaConnection {
 func (s *Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Work, error) {
 
 	if s.client == nil {
-		return Work{}, web.NewError("pasteurizer is not connected", web.ErrReasonInternalError, "", "")
+		return Work{}, web.NewError("spindryer is not connected", web.ErrReasonInternalError, "", "")
 	}
 
 	if err := nw.Validate(); err != nil {
@@ -176,14 +177,14 @@ func (s *Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Wo
 	}
 	w.ID = id
 
-	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_LOTTO_DA_MES", w.CdLotto)
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=3;s=DB_REPORT_4_0_LOTTO_DA_MES", w.CdLotto)
 	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_LOTTO_DA_MES", w.CdLotto)
 	if err != nil {
 		return Work{}, err
 	}
 
 	var bit bool = true
-	// _, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=3;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
 	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_DA_MES", bit)
 	if err != nil {
 		return Work{}, err

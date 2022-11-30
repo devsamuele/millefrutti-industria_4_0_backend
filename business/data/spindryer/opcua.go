@@ -2,7 +2,6 @@ package spindryer
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -33,19 +32,18 @@ func NewOpcuaService(ctx context.Context, log *log.Logger, c *opcua.Client, stor
 func (o *OpcuaService) Run() {
 	go o.WatchOrderConf("ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_CONF", 1)
 	go o.WatchEndWork("ns=2;s=DB_REPORT_4_0_IMP_IN_CICLO_AUT", 1)
+	// go o.WatchOrderConf("ns=3;s=DB_REPORT_4_0_BIT_NUOVO_ORD_CONF", 1)
+	// go o.WatchEndWork("ns=8;s=DB_REPORT_4_0_IMP_IN_CICLO_AUT", 1)
 }
 
 func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
-
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
-
-		log.Println("SPINDRYER SUBSCRIPTION START WORK:", data)
 		bit, _ := data.(bool)
 		if bit {
 			found := true
 			oldWork, err := o.store.QueryActiveWork(o.ctx)
 			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
+				if errors.Is(err, ErrNotFound) {
 					found = false
 				} else {
 					o.log.Println(err)
@@ -54,6 +52,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 			}
 
 			if found && oldWork.Status == PROCESSING_STATUS_SENT {
+				log.Println("SPINDRYER SUBSCRIPTION - START WORK")
 				work := oldWork
 				work.Status = PROCESSING_STATUS_WORK
 
@@ -65,6 +64,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 				defer tx.Rollback()
 
 				var totalCycles int32
+				// newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=8;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
 				newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
 				if err != nil {
 					o.log.Println(err)
@@ -95,9 +95,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 					o.log.Println(err)
 					return
 				}
-
 			}
-
 		}
 	})
 }
@@ -105,19 +103,19 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
-		log.Println("SPINDRYER SUBSCRIPTION END WORK:", data)
 		bit, _ := data.(bool)
 		if !bit {
 			found := true
 			oldWork, err := o.store.QueryActiveWork(o.ctx)
 			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
+				if errors.Is(err, ErrNotFound) {
 					found = false
 				} else {
 					o.log.Println(err)
 					return
 				}
 			}
+
 			if found && oldWork.Status == PROCESSING_STATUS_WORK {
 				work := oldWork
 				work.Status = PROCESSING_STATUS_DONE
@@ -131,15 +129,17 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 
 				var totalCycles int32
 				newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
+				// newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=8;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
 				if err != nil {
 					o.log.Println(err)
 				}
 
 				totalCycles, _ = newTotalCycles.(int32)
-				log.Println("total cycles done:", totalCycles)
+				log.Println("total cycles:", totalCycles)
 
 				// TODO multiply by K
 				work.Cycles = int(totalCycles) - oldWork.TotalCycles
+				log.Println("total cycles result:", totalCycles)
 
 				err = o.store.UpdateWork(o.ctx, tx, work)
 				if err != nil {
@@ -162,6 +162,8 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 					o.log.Println(err)
 					return
 				}
+
+				defer log.Println("SPINDRYER SUBSCRIPTION - END WORK ")
 
 			}
 
