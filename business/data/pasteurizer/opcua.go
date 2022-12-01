@@ -101,7 +101,6 @@ func (o *OpcuaService) WatchBasilAmount(nodeID string, clientHandle uint32) {
 		found := true
 		oldWork, err := o.store.QueryActiveWork(o.ctx)
 		if err != nil {
-			log.Println(err)
 			if errors.Is(err, sql.ErrNoRows) {
 				found = false
 			} else {
