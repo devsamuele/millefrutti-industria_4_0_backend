@@ -32,8 +32,51 @@ func NewOpcuaService(ctx context.Context, log *log.Logger, c *opcua.Client, stor
 func (o *OpcuaService) Run() {
 	go o.WatchOrderConf("ns=2;s=DB_REPORT_4_0_BIT_NUOVO_ORD_CONF", 1)
 	go o.WatchEndWork("ns=2;s=DB_REPORT_4_0_IMP_IN_CICLO_AUT", 1)
+	go o.WatchBatchTot("ns=2;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE", 1)
 	// go o.WatchOrderConf("ns=3;s=DB_REPORT_4_0_BIT_NUOVO_ORD_CONF", 1)
 	// go o.WatchEndWork("ns=8;s=DB_REPORT_4_0_IMP_IN_CICLO_AUT", 1)
+	// go o.WatchBatchTot("ns=8;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE", 1)
+}
+
+func (o *OpcuaService) WatchBatchTot(nodeID string, clientHandle uint32) {
+	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
+		found := true
+		oldWork, err := o.store.QueryActiveWork(o.ctx)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				found = false
+			} else {
+				o.log.Println(err)
+				return
+			}
+		}
+
+		if found && oldWork.Status == PROCESSING_STATUS_WORK {
+			log.Println("SPINDRYER SUBSCRIPTION - START UPDATE CYCLE")
+			cycles, _ := data.(int32)
+			oldWork.Cycles = int(cycles)
+
+			tx, err := o.store.BeginTx(o.ctx)
+			if err != nil {
+				o.log.Println(err)
+				return
+			}
+			defer tx.Rollback()
+
+			err = o.store.UpdateWork(o.ctx, tx, oldWork)
+			if err != nil {
+				o.log.Println(err)
+				return
+			}
+
+			if err := tx.Commit(); err != nil {
+				o.log.Println(err)
+				return
+			}
+			log.Println("total partial cycles:", cycles)
+			log.Println("SPINDRYER SUBSCRIPTION - END UPDATE CYCLE")
+		}
+	})
 }
 
 func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
@@ -71,7 +114,7 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 				}
 
 				totalCycles, _ = newTotalCycles.(int32)
-				log.Println("total cycles work:", totalCycles)
+				log.Println("total initial cycles:", totalCycles)
 				work.TotalCycles = int(totalCycles)
 
 				err = o.store.UpdateWork(o.ctx, tx, work)
@@ -127,19 +170,23 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 				}
 				defer tx.Rollback()
 
-				var totalCycles int32
-				newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
-				// newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=8;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
-				if err != nil {
-					o.log.Println(err)
-				}
+				// var totalCycles int32
+				// newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
+				// // newTotalCycles, err := opcuaconn.Read(o.ctx, o.c, "ns=8;s=DB_REPORT_4_0_BATCH_TOTALIZZATORE")
+				// if err != nil {
+				// 	o.log.Println(err)
+				// }
 
-				totalCycles, _ = newTotalCycles.(int32)
-				log.Println("total cycles:", totalCycles)
+				// totalCycles, _ = newTotalCycles.(int32)
+				// log.Println("total cycles:", totalCycles)
 
 				// TODO multiply by K
-				work.Cycles = int(totalCycles) - oldWork.TotalCycles
-				log.Println("total cycles result:", totalCycles)
+				// work.Cycles = int(totalCycles) - oldWork.TotalCycles
+				// log.Println("total cycles result:", totalCycles)
+
+				work.Cycles = work.Cycles - work.TotalCycles
+				log.Println("total end cycles:", work.Cycles)
+				work.Cycles = work.Cycles * 5 // per ogni ciclo 5 kg di basilico
 
 				err = o.store.UpdateWork(o.ctx, tx, work)
 				if err != nil {
@@ -163,7 +210,7 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 					return
 				}
 
-				defer log.Println("SPINDRYER SUBSCRIPTION - END WORK ")
+				log.Println("SPINDRYER SUBSCRIPTION - END WORK")
 
 			}
 
