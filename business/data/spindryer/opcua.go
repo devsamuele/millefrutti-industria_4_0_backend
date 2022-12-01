@@ -52,7 +52,7 @@ func (o *OpcuaService) WatchBatchTot(nodeID string, clientHandle uint32) {
 		}
 
 		if found && oldWork.Status == PROCESSING_STATUS_WORK {
-			log.Println("SPINDRYER SUBSCRIPTION - START UPDATE CYCLE")
+			log.Println("SPINDRYER SUBSCRIPTION - START UPDATE BATCH TOT")
 			cycles, _ := data.(int32)
 			oldWork.Cycles = int(cycles)
 
@@ -74,7 +74,7 @@ func (o *OpcuaService) WatchBatchTot(nodeID string, clientHandle uint32) {
 				return
 			}
 			log.Println("total partial cycles:", cycles)
-			log.Println("SPINDRYER SUBSCRIPTION - END UPDATE CYCLE")
+			log.Println("SPINDRYER SUBSCRIPTION - END UPDATE BATCH TOT")
 		}
 	})
 }

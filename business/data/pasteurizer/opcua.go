@@ -31,8 +31,14 @@ func NewOpcuaService(ctx context.Context, log *log.Logger, c *opcua.Client, stor
 }
 
 func (o *OpcuaService) Run() {
+	// go o.WatchOrderConf("ns=8;s=Siemens S7-1200/S7-1500.Tags.Send.Conferma_Nuovo_Lotto", 1)
+	// go o.WatchEndWork("ns=8;s=Siemens S7-1200/S7-1500.Tags.Send.Fine_Produzione", 2)
+	// go o.WatchBasilAmount("ns=8;s=Siemens S7-1200/S7-1500.Tags.Send.Quantità_Basilico_Lavorato", 3)
+	// go o.WatchBasilPackages("ns=8;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi", 4)
 	go o.WatchOrderConf("ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Conferma_Nuovo_Lotto", 1)
 	go o.WatchEndWork("ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Fine_Produzione", 1)
+	go o.WatchBasilAmount("ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Quantità_Basilico_Lavorato", 1)
+	go o.WatchBasilPackages("ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi", 1)
 }
 
 func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
@@ -88,6 +94,132 @@ func (o *OpcuaService) WatchOrderConf(nodeID string, clientHandle uint32) {
 	})
 }
 
+func (o *OpcuaService) WatchBasilAmount(nodeID string, clientHandle uint32) {
+
+	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
+
+		found := true
+		oldWork, err := o.store.QueryActiveWork(o.ctx)
+		if err != nil {
+			log.Println(err)
+			if errors.Is(err, sql.ErrNoRows) {
+				found = false
+			} else {
+				return
+			}
+		}
+
+		if found && oldWork.Status == PROCESSING_STATUS_WORK {
+			log.Println("SPINDRYER SUBSCRIPTION - START UPDATE BASIL AMOUNT")
+
+			currentBasilAmount, _ := data.(int64)
+
+			work := oldWork
+
+			tx, err := o.store.BeginTx(o.ctx)
+			if err != nil {
+				o.log.Println(err)
+				return
+			}
+			defer tx.Rollback()
+
+			work.BasilAmount = int(currentBasilAmount)
+			log.Println("current basil amount:", currentBasilAmount)
+			// TODO: TEMPORARY
+			if currentBasilAmount == 0 {
+				work.BasilAmount = 400
+			}
+
+			// var packages uint16
+			// newPackages, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi")
+			// if err != nil {
+			// 	o.log.Println(err)
+			// }
+
+			// packages, _ = newPackages.(uint16)
+			// log.Println("basil packages:", packages)
+			// work.Packages = int(packages)
+			// // TODO: TEMPORARY
+			// work.Packages = 2
+
+			err = o.store.UpdateWork(o.ctx, tx, work)
+			if err != nil {
+				o.log.Println(err)
+				return
+			}
+
+			if err := tx.Commit(); err != nil {
+				o.log.Println(err)
+				return
+			}
+			log.Println("SPINDRYER SUBSCRIPTION - END UPDATE BASIL AMOUNT")
+		}
+	})
+}
+
+func (o *OpcuaService) WatchBasilPackages(nodeID string, clientHandle uint32) {
+
+	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
+
+		found := true
+		oldWork, err := o.store.QueryActiveWork(o.ctx)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				found = false
+			} else {
+				return
+			}
+		}
+
+		if found && oldWork.Status == PROCESSING_STATUS_WORK {
+			log.Println("SPINDRYER SUBSCRIPTION - START UPDATE BASIL PACKAGE")
+
+			currentBasilPackages, _ := data.(uint16)
+
+			work := oldWork
+
+			tx, err := o.store.BeginTx(o.ctx)
+			if err != nil {
+				o.log.Println(err)
+				return
+			}
+			defer tx.Rollback()
+
+			// work.BasilAmount = int(currentBasilAmount)
+			// log.Println("current basil amount:", currentBasilAmount)
+			// // TODO: TEMPORARY
+			// if currentBasilAmount == 0 {
+			// 	work.BasilAmount = 400
+			// }
+
+			// var packages uint16
+			// newPackages, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi")
+			// if err != nil {
+			// 	o.log.Println(err)
+			// }
+
+			// packages, _ = newPackages.(uint16)
+			work.Packages = int(currentBasilPackages)
+			log.Println("basil packages:", currentBasilPackages)
+			if work.Packages == 0 {
+				work.Packages = 2
+			}
+
+			err = o.store.UpdateWork(o.ctx, tx, work)
+			if err != nil {
+				o.log.Println(err)
+				return
+			}
+
+			if err := tx.Commit(); err != nil {
+				o.log.Println(err)
+				return
+			}
+			log.Println("SPINDRYER SUBSCRIPTION - END UPDATE BASIL PACKAGE")
+		}
+	})
+}
+
 func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 
 	opcuaconn.Subscribe(o.ctx, o.c, nodeID, clientHandle, func(data interface{}) {
@@ -115,30 +247,30 @@ func (o *OpcuaService) WatchEndWork(nodeID string, clientHandle uint32) {
 				}
 				defer tx.Rollback()
 
-				var basilAmount int64
-				newBasilAmount, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Quantità_Basilico_Lavorato")
-				if err != nil {
-					o.log.Println(err)
-				}
+				// var basilAmount int64
+				// newBasilAmount, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Quantità_Basilico_Lavorato")
+				// if err != nil {
+				// 	o.log.Println(err)
+				// }
 
-				// TODO um
-				basilAmount, _ = newBasilAmount.(int64)
-				log.Println("basil amount:", basilAmount)
-				work.BasilAmount = int(basilAmount)
-				// TODO: TEMPORARY
-				work.BasilAmount = 400
+				// // TODO um
+				// basilAmount, _ = newBasilAmount.(int64)
+				// log.Println("basil amount:", basilAmount)
+				// work.BasilAmount = int(basilAmount)
+				// // TODO: TEMPORARY
+				// work.BasilAmount = 400
 
-				var packages uint16
-				newPackages, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi")
-				if err != nil {
-					o.log.Println(err)
-				}
+				// var packages uint16
+				// newPackages, err := opcuaconn.Read(o.ctx, o.c, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Send.Numero_Di_Imballi")
+				// if err != nil {
+				// 	o.log.Println(err)
+				// }
 
-				packages, _ = newPackages.(uint16)
-				log.Println("basil packages:", packages)
-				work.Packages = int(packages)
-				// TODO: TEMPORARY
-				work.Packages = 2
+				// packages, _ = newPackages.(uint16)
+				// log.Println("basil packages:", packages)
+				// work.Packages = int(packages)
+				// // TODO: TEMPORARY
+				// work.Packages = 2
 
 				err = o.store.UpdateWork(o.ctx, tx, work)
 				if err != nil {

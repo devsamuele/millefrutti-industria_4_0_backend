@@ -36,6 +36,7 @@ func NewService(store Store, shutdown chan os.Signal, log *log.Logger, io *ws.Ev
 // Pasteurizer "opc.tcp://192.168.1.181:4840"
 
 func (s *Service) OpcuaConnect(ctx context.Context) error {
+	// pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.181:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	pasteurizerClient := opcua.NewClient("opc.tcp://192.168.1.181:4840", opcua.SecurityMode(ua.MessageSecurityModeNone), opcua.DialTimeout(time.Second*10))
 	if err := pasteurizerClient.Connect(ctx); err != nil {
 		return web.NewError("pasteurizer not connected", web.ErrReasonInternalError, "", "")
@@ -137,12 +138,14 @@ func (s Service) InsertWork(ctx context.Context, nw NewWork, now time.Time) (Wor
 	}
 	w.ID = id
 
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=8;s=Siemens S7-1200/S7-1500.Tags.Receive.Numero_Lotto", w.CdLotto)
 	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Receive.Numero_Lotto", w.CdLotto)
 	if err != nil {
 		return Work{}, err
 	}
 
 	var bit bool = true
+	// _, err = opcuaconn.Write(ctx, s.client, "ns=8;s=Siemens S7-1200/S7-1500.Tags.Receive.Bit_Nuovo_Lotto", bit)
 	_, err = opcuaconn.Write(ctx, s.client, "ns=2;s=Siemens S7-1200/S7-1500.Tags.Receive.Bit_Nuovo_Lotto", bit)
 	if err != nil {
 		return Work{}, err
